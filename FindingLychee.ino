@@ -183,8 +183,50 @@ static void smartDelay(unsigned long ms)
 //////////////////////////////// Application ///////////////////////////////////
 
 static const int MODE_TRACKING = 0;
+static const int MODE_COMMAND = 1;
+
+static const int COMMAND_HELP = 0;
+static const int COMMAND_EXPORT = 1;
+static const int COMMAND_RESET = 2;
 
 int mode = MODE_TRACKING;
+
+void execute_command_help()
+{
+}
+
+void execute_command_export()
+{
+  
+}
+
+void execute_command_reset()
+{
+}
+
+void execute_command(unsigned int command)
+{
+  switch (command)
+  {
+    case COMMAND_HELP:
+      execute_command_help();
+      break;
+  }
+}
+
+void process_serial_command()
+{
+  if (Serial.available())
+  {
+    char inChar = (char)Serial.read();
+    Serial.print(">>>> "); Serial.println(inChar);
+    if (inChar >= '0' && inChar <= '9')
+    {
+      unsigned int command = inChar - '0';
+      execute_command(command);
+    }
+  }
+}
 
 void setup()
 {
@@ -201,6 +243,16 @@ void loop()
   if (mode == MODE_TRACKING)
   {
     gps_tracking();
+  }
+  else if (mode == MODE_COMMAND)
+  {
+    process_serial_command();
+  }
+  
+  if (Serial.available())
+  {
+    // Change to command mode which stop track GPS location
+    mode = MODE_COMMAND;
   }
 }
 
