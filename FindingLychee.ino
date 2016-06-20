@@ -33,6 +33,7 @@ struct LocationItem
 //////////////////////////////////// EEPROM Memory functions //////////////////////////////////////
 
 const unsigned int SERIALIZED_LENGTH = 10; // float (4 bytes) + float (4 bytes) + time (2 bytes)
+const unsigned int MAX_ITEMS_IN_MEMORY = 3275;
 
 void i2c_eeprom_write_byte( int deviceaddress, unsigned int eeaddress, byte data )
 {
@@ -129,12 +130,17 @@ void add_location_item(struct LocationItem loc)
 {
   int i = 0;
   read_int(0, i);
-  Serial.print("read i="); Serial.println(i);
+  Serial.print("read i="); Serial.print(i);
+  Serial.print("MAX="); Serial.print(MAX_ITEMS_IN_MEMORY);
+  Serial.println();
 
-  write_location_item(i, loc);
-
-  i++;
-  write_int(0, i);
+  if (i < MAX_ITEMS_IN_MEMORY)
+  {
+    write_location_item(i, loc);
+  
+    i++;
+    write_int(0, i);
+  }
 }
 
 //////////////////////////////// GPS Functions /////////////////////////////////
@@ -162,7 +168,7 @@ void gps_tracking()
     add_location_item(loc);
   }
 
-  smartDelay(1000);
+  smartDelay(3000);
 
   if (millis() > 5000 && gps.charsProcessed() < 10)
     Serial.println(F("No GPS data received: check wiring"));
@@ -193,15 +199,48 @@ int mode = MODE_TRACKING;
 
 void execute_command_help()
 {
+  Serial.println("FindingLychee 1.0.0 by Ido Ran");
+  Serial.println("0 - help");
+  Serial.println("1 - export");
+  Serial.println("2 - reset");
 }
 
 void execute_command_export()
 {
-  
+  int itemsCount = 0;
+  read_int(0, itemsCount);
+  Serial.print("read itemsCount="); Serial.println(itemsCount);
+
+  struct LocationItem loc;
+  for (int index = 0; index < itemsCount; index++)
+  {
+    read_location_item(index, loc);
+    print_location_item(loc);
+  }  
+}
+
+void print_location_item(const struct LocationItem &v)
+{
+  Serial.print(v.lng, 6); Serial.print(",");
+  Serial.print(v.lat, 6); Serial.print(",");
+  Serial.print(v.time.hour); Serial.print(":");
+  Serial.print(v.time.minute); Serial.print(":");
+  Serial.print(v.time.second);
+  Serial.println();  
 }
 
 void execute_command_reset()
 {
+  // To be on the safe side, export anything in memory to Serial before erase it.
+  execute_command_export();
+  
+  // Reset item counter to zero.
+  int zeroItems = 0;
+  write_int(0, zeroItems);
+  
+  read_int(0, zeroItems);
+  Serial.println("Memory reset");
+  Serial.print("i="); Serial.println(zeroItems);
 }
 
 void execute_command(unsigned int command)
@@ -210,6 +249,12 @@ void execute_command(unsigned int command)
   {
     case COMMAND_HELP:
       execute_command_help();
+      break;
+    case COMMAND_EXPORT:
+      execute_command_export();
+      break;
+    case COMMAND_RESET:
+      execute_command_reset();
       break;
   }
 }
@@ -232,6 +277,8 @@ void setup()
 {
   Serial.begin(115200);
   ss.begin(GPSBaud);
+  
+  Wire.begin(); // initialise the connection
 
   Serial.println(F("Finding Lychee 1.0.0"));
   Serial.print(F("TinyGPS++ library v. ")); Serial.println(TinyGPSPlus::libraryVersion());
