@@ -221,8 +221,8 @@ void execute_command_export()
 
 void print_location_item(const struct LocationItem &v)
 {
-  Serial.print(v.lng, 6); Serial.print(",");
   Serial.print(v.lat, 6); Serial.print(",");
+  Serial.print(v.lng, 6); Serial.print(",");
   Serial.print(v.time.hour); Serial.print(":");
   Serial.print(v.time.minute); Serial.print(":");
   Serial.print(v.time.second);
